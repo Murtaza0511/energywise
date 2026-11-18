@@ -1,0 +1,9 @@
+numpy==2.5.5
+pandas==2.2.3
+scikit-learn==1.9.1
+streamlit==1.67.0
+plotly==7.1.0
+rapidocr==3.10.0
+onnxruntime==1.32.0
+Pillow==13.0.0
+joblib==1.6.0

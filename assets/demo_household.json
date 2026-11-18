@@ -1,0 +1,120 @@
+{
+  "notice": "Public dataset example and illustrative prices/routine; not owner household data.",
+  "dataset": "REWD-P",
+  "source_household": "REWD-P:House039",
+  "records": [
+    {
+      "month": "2023-11",
+      "kwh": 307.6947570914833,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2023-12",
+      "kwh": 224.69390861225,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-01",
+      "kwh": 207.34121222056663,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-02",
+      "kwh": 246.805940836,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-03",
+      "kwh": 354.0590602823,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-04",
+      "kwh": 486.4667358332333,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-05",
+      "kwh": 373.5341750009,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-06",
+      "kwh": 709.0025394453168,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-07",
+      "kwh": 1039.66222305735,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-08",
+      "kwh": 605.0301863892166,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-09",
+      "kwh": 628.4973966673333,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    },
+    {
+      "month": "2024-10",
+      "kwh": 590.8530686091667,
+      "source": "Public REWD-P example; REWD-P:House039; not personal bill data"
+    }
+  ],
+  "settings": {
+    "off_peak_rate": 35,
+    "peak_rate": 45,
+    "peak_share": 0.1,
+    "fixed_charge": 2000,
+    "phl_rate": 0,
+    "carried_charges": [
+      {
+        "name": "Illustrative other charges",
+        "amount_pkr": 1000
+      }
+    ],
+    "source_month": "Illustrative demo assumptions",
+    "peak_start": "17:30",
+    "peak_end": "22:30",
+    "forecast_method": "extra_trees",
+    "billing_scope": "single_master_meter"
+  },
+  "appliances": [
+    {
+      "id": "demo-ac",
+      "name": "Bedroom AC",
+      "kind": "AC (small / around 1 ton)",
+      "watts": 1200,
+      "quantity": 1,
+      "hours": 2,
+      "days": 7,
+      "minimum_hours": 1,
+      "can_reduce": true
+    },
+    {
+      "id": "demo-fan",
+      "name": "Ceiling fans",
+      "kind": "Ordinary ceiling fan",
+      "watts": 88,
+      "quantity": 2,
+      "hours": 4,
+      "days": 7,
+      "minimum_hours": 2,
+      "can_reduce": true
+    },
+    {
+      "id": "demo-light",
+      "name": "LED lights",
+      "kind": "LED light",
+      "watts": 10,
+      "quantity": 5,
+      "hours": 3,
+      "days": 7,
+      "minimum_hours": 1.5,
+      "can_reduce": true
+    }
+  ]
+}

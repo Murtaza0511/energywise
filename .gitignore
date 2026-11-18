@@ -1,0 +1,5 @@
+.local/
+.streamlit/secrets.toml
+.venv/
+__pycache__/
+data/consumer/

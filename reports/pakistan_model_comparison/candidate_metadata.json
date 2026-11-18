@@ -1,0 +1,29 @@
+{
+  "method": "Relative Extra Trees",
+  "fitted_rows": 391,
+  "source_households": 78,
+  "first_training_target": "2018-07",
+  "last_training_target": "2024-10",
+  "artifact_sha256": "f7700de643bdda96fd3bf452162bd2f2eb4dcba34268be7401cb50ed0b9aa6ff",
+  "input_sha256": "bae53025966201b678d07affda49ccc93506671527cf4b2674feedd77d88dea5",
+  "evaluated_via_separate_grouped_rolling_folds": true,
+  "saved_fit_not_independently_scored": true,
+  "personal_household_validated": false,
+  "app_changed": false,
+  "sklearn_version": "1.9.1",
+  "relative_feature_names": [
+    "lag_1_div_scale",
+    "lag_2_div_scale",
+    "lag_3_div_scale",
+    "lag_4_div_scale",
+    "lag_5_div_scale",
+    "lag_6_div_scale",
+    "mean3_div_scale",
+    "lag1_minus_lag2_div_scale",
+    "target_month_sin",
+    "target_month_cos",
+    "target_calendar_days"
+  ],
+  "scale": "max(mean6,1 kWh)",
+  "target_transform": "log1p(target_kwh/scale)"
+}
