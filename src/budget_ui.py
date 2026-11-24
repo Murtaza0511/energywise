@@ -32,6 +32,12 @@ def clear_plan(data,settings):
     if settings and 'saved_usage_plan' in settings:
         updated=dict(settings);updated.pop('saved_usage_plan');save_settings(data,updated)
 
+def save_routine(data,rows,settings,usage_changed=True):
+    if usage_changed and settings and 'saved_usage_plan' in settings:
+        with plan_transaction(data):
+            save_appliances(data,rows);clear_plan(data,settings)
+    else:save_appliances(data,rows)
+
 
 def render_budget(data,records,settings):
     st.subheader('What would you like your next bill to be?')
@@ -66,8 +72,9 @@ def render_budget(data,records,settings):
             if st.form_submit_button('Add to my routine'):
                 row=dict(id=uuid.uuid4().hex,name=name.strip() or kind,kind=kind,quantity=quantity,hours=hours,days=week,can_reduce=True,minimum_hours=hours/2,watts=watts)
                 try:
-                    save_appliances(data,[*appliances,row]);clear_plan(data,settings);st.rerun()
-                except ValueError as error:st.error(str(error))
+                    save_routine(data,[*appliances,row],settings);st.rerun()
+                except StorageError as error:recovery_screen(error)
+                except (ValueError,OSError) as error:st.error('Your routine could not be saved. '+str(error))
     if appliances:
         st.subheader('What you normally use')
         st.caption('Enter your usual routine here. The app will choose which appliances to suggest reducing.')
@@ -80,12 +87,19 @@ def render_budget(data,records,settings):
             if st.form_submit_button('Save my usual routine'):
                 try:
                     originals={r['id']:r for r in appliances}
-                    save_appliances(data,[dict(originals[r['id']],**r,minimum_hours=r['hours']/2,can_reduce=True) for r in edited.to_dict('records')]);clear_plan(data,settings);st.rerun()
-                except ValueError as error:st.error(str(error))
+                    rows=[dict(originals[r['id']],**r,minimum_hours=min(originals[r['id']]['minimum_hours'],r['hours'])) for r in edited.to_dict('records')]
+                    if rows==appliances:st.success('Your routine is already saved. Your accepted plan has been kept.')
+                    else:
+                        changed=any(any(r[k]!=originals[r['id']][k] for k in ('quantity','hours','days')) for r in rows)
+                        save_routine(data,rows,settings,changed);st.rerun()
+                except StorageError as error:recovery_screen(error)
+                except (ValueError,OSError) as error:st.error('Your routine could not be saved. '+str(error))
         with st.expander('Remove an appliance'):
             remove=st.selectbox('Choose an appliance to remove',[r['id'] for r in appliances],format_func=lambda key:next(r['name'] for r in appliances if r['id']==key))
             if st.button('Remove selected appliance'):
-                save_appliances(data,[r for r in appliances if r['id']!=remove]);clear_plan(data,settings);st.rerun()
+                try:save_routine(data,[r for r in appliances if r['id']!=remove],settings);st.rerun()
+                except StorageError as error:recovery_screen(error)
+                except (ValueError,OSError) as error:st.error('Your routine could not be saved. '+str(error))
     else:st.info('Add your first appliance above. You do not need to know its watts.')
     if appliances and st.button('Show me how',type='primary'):
         st.session_state.show_budget_suggestions=True

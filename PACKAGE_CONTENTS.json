@@ -1,6 +1,6 @@
 {
   "files": {
-    "app.py": "8d240eaaab4a4ba1424e44635b40b452842650930f3b1c4cff0d409ae28ff4ea",
+    "app.py": "9423460f201b5e30ef0e1fb161314e299670cf2f774184c1ce9f14a83a036a44",
     ".streamlit/config.toml": "5078938118dd2ab9c6f439665b9fe43a065655bb3d454adf8d36cd48329c1bd2",
     "START_HERE.md": "4ae8a5df366b347b5d8f3dd9c9cb2cd597e00ebbd06179ac743a665939c7c5fa",
     "assets/app.css": "850b5be01dc55824bdf8be11cb4771b5b12d303e1eb13ab1f79955b90e7c95c8",
@@ -17,10 +17,10 @@
     "src/personal_estimate.py": "d8a2dc4e5784f5194fb42c6b8ff26428dd3ddc0ee168aab27a59ab3e9bc76a85",
     "src/storage.py": "32bf185d33c714089650b97bb047eb7f5b1c71bf5dec930808176308e48cc29d",
     "src/history_preparation.py": "7557ab93e206a41a8de7d6259cda611cdc713db1f55e9e467bedf9699a794fa7",
-    "src/bill_photo.py": "e3dac3757c47a4a9d3324b3daf552a8557a803d82e471071009fdafd36e88f85",
-    "src/bills_ui.py": "e989b1c7aa03d439165e476e27895e0e5e4bcc901ebebf2f470657018a69a48e",
+    "src/bill_photo.py": "a30a2df1153612eff929e1d7854f0a503970be681682714ed6ba3b23be4e6648",
+    "src/bills_ui.py": "74a2b7ec91c2a83c545dc3d8c823c2e39a3f62b7a4e836faf449ec6c8742554d",
     "src/budget_planner.py": "138981846b2532ecfd5e1dcb3869217dc2fced0049627bd262e61e3cf2965d31",
-    "src/budget_ui.py": "eacbcb15c84b7abdaa6710449917ca08a62a8bc445ea37af995f7b0992b7f218",
+    "src/budget_ui.py": "452fe609f3e4797dfb22d373ad248cbd740873eed4a38367e07f9ee72e1e6a69",
     "src/consumer_forecast.py": "f8c9d6efb11c11dab112e4eac3b7cc29bd3c44b6c132658181d55cb1db5f368d",
     "src/estimate_ui.py": "0b4cf26c019c806b5fd3313c35c618a046b7dbfcd2ba6c47d97d9bf5e977c58e",
     "src/household_check_ui.py": "3fdad11df91ecd87855668f09087fe76306f1e042ba78f82463aec9d461a8f0f",

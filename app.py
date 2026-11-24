@@ -22,7 +22,7 @@ apply_design(ROOT)
 from access_ui import gate_access
 DATA=gate_access(ROOT,DATA)
 view=st.sidebar.radio('Go to',['My bills','Next bill estimate','Plan my bill'],key='page')
-st.sidebar.markdown('<div class="sidebar-note"><strong>Your home. Your control.</strong>Keep your history together, see what’s ahead and explore ways to save.<br><br>Photos are read on this computer.</div>',unsafe_allow_html=True)
+st.sidebar.markdown('<div class="sidebar-note"><strong>Your home. Your control.</strong>Keep your history together, see what’s ahead and explore ways to save.<br><br>Photos are processed for this session.</div>',unsafe_allow_html=True)
 page_header(view)
 try:
     records=load_records(DATA)

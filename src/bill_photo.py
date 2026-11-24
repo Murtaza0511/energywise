@@ -1,5 +1,6 @@
 """Local OCR. Unknown fields remain missing, never zero-filled."""
 import re
+import json,math
 from pathlib import Path
 
 
@@ -121,3 +122,69 @@ def classify_reading(records,result):
     existing=next((r for r in records if r['month']==result['month']),None)
     if existing is None:return 'new'
     return 'duplicate' if float(existing['kwh'])==float(result['kwh']) else 'conflict'
+
+
+PHOTO_SOURCE='Bill photos v1: '
+
+def photo_payload(row):
+    """Private provenance lives in the existing source column, never a saved photo."""
+    source=row.get('source','')
+    if not source.startswith(PHOTO_SOURCE):return None
+    from billing import number
+    try:
+        payload=json.loads(source[len(PHOTO_SOURCE):])
+        if not isinstance(payload,dict) or not isinstance(payload.get('entries'),list) or not isinstance(payload.get('retired_ids',[]),list):raise ValueError('Invalid photo references')
+        seen=set();total=number(payload.get('baseline',0),'Saved household units')+number(payload.get('adjustment',0),'Reviewed adjustment',True)
+        for entry in payload['entries']:
+            digest=entry['id']
+            if not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest) or digest in seen:raise ValueError('Invalid photo reference')
+            seen.add(digest);total+=number(entry['kwh'],'Bill units')
+        for digest in payload.get('retired_ids',[]):
+            if not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest):raise ValueError('Invalid replaced photo reference')
+        if total!=number(row['kwh'],'Monthly total'):raise ValueError('Photo contributions do not match the monthly total')
+        return payload
+    except (ValueError,KeyError,TypeError):
+        raise ValueError('The saved photo references for this month need review. Edit and confirm its household total before adding another bill.')
+
+def photo_seen(records,digest):
+    for row in records:
+        payload=photo_payload(row)
+        if payload and (digest in payload.get('retired_ids',[]) or any(e['id']==digest for e in payload['entries'])):return True
+    return False
+
+def photo_record(records,month,units,digest,mode='new',confirmed=False):
+    """Add distinct contributions only after confirmation; exact uploads are idempotent."""
+    from personal_estimate import month_id
+    from billing import number
+    month_id(month);amount=number(units,'Bill units')
+    if not math.isfinite(float(amount)):raise ValueError('Bill units are too large.')
+    if not isinstance(digest,str) or not re.fullmatch('[0-9a-f]{64}',digest):raise ValueError('Invalid photo reference.')
+    if mode not in ('new','replace','add'):raise ValueError('Choose how to use this bill.')
+    if photo_seen(records,digest):raise ValueError('This exact photo has already been used. Its units were not added again.')
+    old=next((r for r in records if r['month']==month),None)
+    if mode=='new' and old:raise ValueError('This month already exists. Review it before changing the total.')
+    if mode=='add' and not confirmed:raise ValueError('Confirm this is a different bill not already included in the saved total.')
+    previous=photo_payload(old) if old else None
+    payload=dict(baseline=0,adjustment=0,entries=[],retired_ids=[])
+    if mode=='add' and old:
+        if 'interpolated' in old.get('source','').lower():raise ValueError('This month includes an averaged reading. Enter its confirmed household total instead of adding to the average.')
+        if previous:payload=previous
+        else:payload.update(baseline=float(number(old['kwh'],'Saved household units')),baseline_source=old.get('source',''))
+    elif mode=='replace' and previous:
+        payload['retired_ids']=list(dict.fromkeys(previous.get('retired_ids',[])+[e['id'] for e in previous['entries']]))
+    payload['entries'].append(dict(id=digest,kwh=float(amount)))
+    total=number(payload['baseline'],'Saved household units')+number(payload['adjustment'],'Reviewed adjustment',True)
+    total+=sum(number(e['kwh'],'Bill units') for e in payload['entries'])
+    row=dict(month=month,kwh=float(total),source=PHOTO_SOURCE+json.dumps(payload,sort_keys=True))
+    photo_payload(row)
+    return [r for r in records if r['month']!=month]+[row]
+
+def reviewed_photo_source(row,units):
+    """Keep upload fingerprints after the user explicitly corrects a monthly total."""
+    from billing import number
+    try:payload=photo_payload(row)
+    except ValueError:return 'User-reviewed bill record; previous photo references could not be verified'
+    if payload is None:return 'User-reviewed bill record'
+    total=number(payload['baseline'],'Saved household units')+sum(number(e['kwh'],'Bill units') for e in payload['entries'])
+    payload['adjustment']=float(number(units,'Monthly total')-total);payload['reviewed']=True
+    return PHOTO_SOURCE+json.dumps(payload,sort_keys=True)
