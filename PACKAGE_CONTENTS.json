@@ -16,7 +16,7 @@
     "src/billing.py": "027ac871ff484140012ff2ead08b4dad732a1ecfeae4d10d9b44f953ad7e9ef0",
     "src/personal_estimate.py": "86008edb4a9f840155956f05aa00702bb7ef67f7cdc2e305d310e9f131eea341",
     "src/storage.py": "7bac32e6a49860086097aa3fca15b53d39a4c0951c4db9d095f2d34deb9c1d59",
-    "src/history_preparation.py": "2943579fef3c857d3bb16c642699caa8887e3ec60a2bb9a006a119f9945cf9e3",
+    "src/history_preparation.py": "7557ab93e206a41a8de7d6259cda611cdc713db1f55e9e467bedf9699a794fa7",
     "src/bill_photo.py": "e3dac3757c47a4a9d3324b3daf552a8557a803d82e471071009fdafd36e88f85",
     "src/bills_ui.py": "e989b1c7aa03d439165e476e27895e0e5e4bcc901ebebf2f470657018a69a48e",
     "src/budget_planner.py": "138981846b2532ecfd5e1dcb3869217dc2fced0049627bd262e61e3cf2965d31",
