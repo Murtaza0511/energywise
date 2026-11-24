@@ -1,16 +1,83 @@
 """Local single-user CSV storage; no automatic loading of personal example data."""
-import csv,json,os,tempfile,hashlib,uuid
+import csv,json,os,tempfile,hashlib,uuid,base64,threading
+from contextlib import contextmanager
+from functools import wraps
 from pathlib import Path
 from personal_estimate import month_id
 from billing import number
 
 FIELDS=['month','kwh','source']
 DELETED='User-deleted month; do not average automatically'
+_PLAN_LOCK=threading.RLock()
+_PLAN_ACTIVE=threading.local()
+_PLAN_FILES=('appliances.csv','settings.csv')
+_PLAN_JOURNAL='.pending_plan.json'
 
 class StorageError(ValueError):
     def __init__(self,path):
         self.path=Path(path)
         super().__init__(f'We could not read {self.path.name}. Your saved file has been kept unchanged.')
+
+def recover_plan(folder):
+    """Roll back an uncommitted two-file save before exposing either file."""
+    folder=Path(folder);journal=folder/_PLAN_JOURNAL
+    if not journal.exists():return
+    try:
+        saved=json.loads(journal.read_text())
+        if not isinstance(saved,dict) or saved.get('version')!=1 or saved.get('state') not in ('prepared','committed'):raise ValueError('Invalid recovery record')
+        if not isinstance(saved.get('files'),dict) or set(saved['files'])!=set(_PLAN_FILES):raise ValueError('Invalid recovery files')
+        originals={}
+        for name in _PLAN_FILES:
+            entry=saved['files'][name]
+            if not isinstance(entry,dict) or set(entry)!={'content','sha256'}:raise ValueError('Invalid recovery entry')
+            if entry.get('content') is None and entry.get('sha256') is None:originals[name]=None
+            else:
+                if not isinstance(entry.get('content'),str):raise ValueError('Invalid recovery bytes')
+                raw=base64.b64decode(entry['content'],validate=True)
+                if hashlib.sha256(raw).hexdigest()!=entry.get('sha256'):raise ValueError('Recovery checksum mismatch')
+                originals[name]=raw
+        if saved['state']=='prepared':
+            for name,raw in originals.items():
+                path=folder/name
+                if raw is None:path.unlink(missing_ok=True)
+                else:atomic_text(path,raw)
+        journal.unlink()
+    except (ValueError,TypeError,KeyError,OSError,UnicodeError) as exc:raise StorageError(journal) from exc
+
+def coordinated_access(function):
+    @wraps(function)
+    def guarded(folder,*args,**kwargs):
+        with _PLAN_LOCK:
+            if getattr(_PLAN_ACTIVE,'folder',None)!=str(Path(folder).resolve()):recover_plan(folder)
+            return function(folder,*args,**kwargs)
+    return guarded
+
+@contextmanager
+def plan_transaction(folder):
+    """Single-process coordination plus a durable undo journal for process restarts."""
+    folder=Path(folder)
+    with _PLAN_LOCK:
+        if getattr(_PLAN_ACTIVE,'folder',None) is not None:raise ValueError('A plan save is already in progress.')
+        recover_plan(folder)
+        files={}
+        for name in _PLAN_FILES:
+            path=folder/name;raw=path.read_bytes() if path.exists() else None
+            files[name]=dict(content=base64.b64encode(raw).decode() if raw is not None else None,sha256=hashlib.sha256(raw).hexdigest() if raw is not None else None)
+        saved=dict(version=1,state='prepared',files=files)
+        journal=folder/_PLAN_JOURNAL
+        atomic_text(journal,json.dumps(saved))
+        _PLAN_ACTIVE.folder=str(folder.resolve())
+        try:
+            yield
+            saved['state']='committed'
+            atomic_text(journal,json.dumps(saved))
+        except Exception:
+            recover_plan(folder)
+            raise
+        finally:_PLAN_ACTIVE.folder=None
+        # If interrupted here, recovery sees a completed commit and keeps both new files.
+        try:journal.unlink()
+        except OSError:pass
 
 def read_csv(path,required):
     try:
@@ -42,6 +109,10 @@ def verify_file(path):
         settings={r['key']:json.loads(r['value']) for r in rows}
         from billing import validate_settings
         validate_settings(settings)
+        from consumer_forecast import validated_method
+        from personal_estimate import validate_saved_plan
+        validated_method(settings)
+        if 'saved_usage_plan' in settings:validate_saved_plan(settings['saved_usage_plan'])
     elif name=='appliances.csv':load_appliances(Path(path).parent)
     else:raise ValueError('Unsupported recovery file')
 
@@ -82,9 +153,9 @@ def atomic_text(path,text):
     fd,name=tempfile.mkstemp(dir=path.parent,suffix='.tmp')
     try:
         if isinstance(text,bytes):
-            with os.fdopen(fd,'wb') as f:f.write(text)
+            with os.fdopen(fd,'wb') as f:f.write(text);f.flush();os.fsync(f.fileno())
         else:
-            with os.fdopen(fd,'w',encoding='utf-8',newline='') as f:f.write(text)
+            with os.fdopen(fd,'w',encoding='utf-8',newline='') as f:f.write(text);f.flush();os.fsync(f.fileno())
         os.replace(name,path)
     finally:
         if os.path.exists(name):os.unlink(name)
@@ -123,6 +194,7 @@ def delete_record(folder,records,month):
     save_records(folder,[r for r in records if r['month']!=month],deleted_months=[month])
 
 
+@coordinated_access
 def load_settings(folder):
     path=Path(folder)/'settings.csv'
     if not path.exists():return None
@@ -133,6 +205,7 @@ def load_settings(folder):
     except (ValueError,TypeError,KeyError) as exc:raise StorageError(path) from exc
 
 
+@coordinated_access
 def save_settings(folder,settings):
     import io
     out=io.StringIO();writer=csv.writer(out);writer.writerow(['key','value'])
@@ -140,6 +213,7 @@ def save_settings(folder,settings):
     write_with_backup(Path(folder)/'settings.csv',out.getvalue())
 
 
+@coordinated_access
 def load_appliances(folder):
     path=Path(folder)/'appliances.csv'
     if not path.exists():return []
@@ -151,6 +225,7 @@ def load_appliances(folder):
     except (ValueError,KeyError,TypeError) as exc:raise StorageError(path) from exc
 
 
+@coordinated_access
 def save_appliances(folder,rows):
     import io
     from budget_planner import validate_appliances

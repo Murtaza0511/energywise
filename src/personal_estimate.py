@@ -1,6 +1,7 @@
 """Transparent starting estimate; not the historical French Ridge model."""
 import calendar
 import re
+import math
 from datetime import date
 from billing import number
 
@@ -11,12 +12,23 @@ def month_id(value):
             raise ValueError('Invalid month format')
         year, month = map(int,str(value).split('-'))
         date(year,month,1)
+        if not 1678<=year<=2261:
+            raise ValueError('Unsupported bill year')
         return year*12+month-1
     except (ValueError,TypeError):
-        raise ValueError('Use a valid month in YYYY-MM format, for example 2026-10.')
+        raise ValueError('Use a valid bill month in YYYY-MM format, for example 2026-10. Supported years are 1678–2261.')
 
 
 MIN_MONTHS=6
+
+def validate_saved_plan(plan):
+    try:
+        if not isinstance(plan,dict) or not isinstance(plan.get('history_signature'),str) or not re.fullmatch('[0-9a-f]{64}',plan['history_signature']):raise ValueError('Invalid plan signature')
+        units=float(number(plan.get('units'),'Saved plan units'))
+        if not math.isfinite(units):raise ValueError('Invalid plan units')
+    except (ValueError,TypeError,OverflowError):
+        raise ValueError('Your saved savings plan needs repair. Open My bills and remove the invalid plan to return to the history-based estimate. Your bills and appliance routine are kept.')
+    return plan
 
 def month_label(value):
     year,month=divmod(value,12)

@@ -18,11 +18,17 @@ def verify_password(password,stored):
     except (ValueError,KeyError,TypeError):return False
 
 def validate_config(config):
-    if config.get('version')!=1 or not isinstance(config.get('accounts'),dict):raise ValueError('Invalid login configuration.')
+    if not isinstance(config,dict) or config.get('version')!=1 or not isinstance(config.get('accounts'),dict):raise ValueError('Invalid login configuration.')
     roles=[]
     for username,account in config['accounts'].items():
-        if not username or username!=username.strip().casefold() or account.get('role') not in ('owner','demo'):raise ValueError('Invalid login account.')
-        if not all(k in account.get('password',{}) for k in ('salt','digest','iterations')):raise ValueError('Missing password hash.')
+        if not isinstance(username,str) or not username or len(username)>128 or username!=username.strip().casefold() or not isinstance(account,dict) or account.get('role') not in ('owner','demo'):raise ValueError('Invalid login account.')
+        stored=account.get('password')
+        if not isinstance(stored,dict) or not all(k in stored for k in ('salt','digest','iterations')):raise ValueError('Missing password hash.')
+        try:
+            if not isinstance(stored['salt'],str) or not isinstance(stored['digest'],str):raise ValueError('Invalid password hash')
+            if len(base64.b64decode(stored['salt'],validate=True))!=16 or len(base64.b64decode(stored['digest'],validate=True))!=32:raise ValueError('Invalid password hash')
+            if type(stored['iterations']) is not int or not 100_000<=stored['iterations']<=2_000_000:raise ValueError('Invalid password hash')
+        except (ValueError,TypeError):raise ValueError('Invalid password hash.')
         roles.append(account['role'])
     if roles.count('owner')!=1:raise ValueError('Exactly one owner is required.')
     return config

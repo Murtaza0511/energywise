@@ -1,8 +1,15 @@
 """Consumer forecast selection; frozen ML candidate with explicit failure handling."""
 from personal_estimate import estimate_next_month,history_status
 
+def validated_method(settings=None):
+    method=(settings or {}).get('forecast_method')
+    if method not in (None,'extra_trees','mean3','three_month_average'):
+        raise ValueError('The saved forecasting method is unsupported. Choose Extra Trees or the three-month average in My bills.')
+    return method
+
 def forecast(records,settings=None):
-    if (settings or {}).get('forecast_method')!='extra_trees':
+    method=validated_method(settings)
+    if method!='extra_trees':
         return estimate_next_month(records)
     status=history_status(records)
     if not status['ready']:

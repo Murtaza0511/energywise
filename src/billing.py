@@ -24,7 +24,7 @@ PRICE_FIELDS={'off_peak_rate':'Off-peak price per unit','peak_rate':'Peak price 
 
 def editable_settings(settings):
     """Return safe form values and problems without changing the stored settings."""
-    current=dict(settings or {});problems=[]
+    current=dict(settings or {});problems=[];invalid=[]
     for key,label in PRICE_FIELDS.items():
         try:
             value=float(number(current.get(key),label))
@@ -35,6 +35,7 @@ def editable_settings(settings):
     charges=current.get('carried_charges')
     if not isinstance(charges,list):
         current['carried_charges']=[];problems.append('Named charges')
+        if charges is not None:invalid.append(charges)
     else:
         valid=[]
         for row in charges:
@@ -43,10 +44,13 @@ def editable_settings(settings):
                 amount=float(number(row.get('amount_pkr'),row['name'],True))
                 if not isfinite(amount):raise ValueError('Charge is too large')
                 valid.append(dict(name=row['name'],amount_pkr=amount))
-            except ValueError:problems.append('A named charge')
+            except ValueError:
+                problems.append('A named charge');invalid.append(row)
         current['carried_charges']=valid
+    current['_invalid_charges']=invalid
     for key,default in [('peak_start','17:30'),('peak_end','22:30')]:
         if not isinstance(current.get(key,default),str):current[key]=default
+        current.setdefault(key,default)
     return current,problems
 
 def validate_settings(settings):

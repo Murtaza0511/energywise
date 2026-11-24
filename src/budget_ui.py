@@ -3,7 +3,8 @@ import calendar,uuid,hashlib,json
 import streamlit as st
 import pandas as pd
 from budget_planner import PRESETS,suggest_plans,bill_for_units,automatic_choices,savings_options
-from storage import load_appliances,save_appliances,save_settings,StorageError,recovery_screen
+from storage import load_appliances,save_appliances,save_settings,StorageError,recovery_screen,plan_transaction
+from personal_estimate import validate_saved_plan
 from consumer_forecast import forecast,combined_prices_pending
 
 
@@ -14,6 +15,7 @@ def history_signature(records):
 def household_estimate(records,settings):
     result=forecast(records,settings)
     plan=(settings or {}).get('saved_usage_plan')
+    if settings and 'saved_usage_plan' in settings:validate_saved_plan(plan)
     if plan and plan['history_signature']==history_signature(records):
         result['consumption_kwh']=plan['units']
         result['saved_plan']=True
@@ -38,8 +40,8 @@ def render_budget(data,records,settings):
     if not settings:
         st.info('First add your bill prices in My bills, or load your supplied examples there.');return
     try:estimate=household_estimate(records,settings)
-    except ValueError:
-        st.info('Add six consecutive months in My bills first. The planner needs a starting estimate.');return
+    except ValueError as error:
+        st.error(str(error));return
     units=estimate['consumption_kwh']
     year,month=map(int,estimate['target_month'].split('-'));days=calendar.monthrange(year,month)[1]
     try:starting=bill_for_units(units,settings)
@@ -104,7 +106,7 @@ def render_budget(data,records,settings):
     if st.session_state.pop('budget_saved',False):st.success('Your chosen routine is saved and is now reflected in the next-bill estimate. Your bill history was kept.')
     st.caption('Approximate scenarios, not guaranteed bills. Only the suggested appliance reductions change, within the displayed limits. Other household use and saved tax/adjustment amounts stay unchanged. The same estimated peak-use share is applied to reductions; exact appliance timing is not known.')
     with st.expander('Advanced details'):
-        st.write(f'Planning period: {days} days. Electricity before changes: {units:.1f} kWh. Peak hours in saved settings: {settings["peak_start"]}–{settings["peak_end"]}.')
+        st.write(f'Planning period: {days} days. Electricity before changes: {units:.1f} kWh. Peak hours in saved settings: {settings.get("peak_start") or "Not set"}–{settings.get("peak_end") or "Not set"}.')
         st.dataframe(pd.DataFrame(starting['lines']),hide_index=True)
         st.write('Estimated power is a starting assumption. Actual appliances differ; the two fan types and LED value include illustrative defaults. Adjust known ratings when adding an appliance.')
         st.markdown('[Appliance energy guide](https://dhs.maryland.gov/office-of-home-energy-programs/tips-for-saving-money/) · [Additional appliance ranges](https://www.occ.ohio.gov/factsheet/watts-driving-your-electric-bill)')
@@ -129,6 +131,12 @@ def render_savings_options(data,records,settings,units,target,result,choices):
                 gap=plan['total_pkr']-target
                 if gap>0:st.caption(f"About Rs {gap:,.0f} above your target. Suggested times are rounded to whole minutes.")
                 if st.button('Accept and save this plan',key=f'save_budget_{index}'):
-                    save_appliances(data,plan['appliances'])
-                    updated=dict(settings,saved_usage_plan=dict(history_signature=history_signature(records),units=max(0,units-plan['units_saved'])))
-                    save_settings(data,updated);st.session_state.budget_saved=True;st.rerun()
+                    try:
+                        updated=dict(settings,saved_usage_plan=dict(history_signature=history_signature(records),units=max(0,units-plan['units_saved'])))
+                        with plan_transaction(data):
+                            save_appliances(data,plan['appliances'])
+                            save_settings(data,updated)
+                    except StorageError as error:recovery_screen(error)
+                    except (OSError,ValueError):
+                        st.error('Your plan could not be saved. The previous routine and estimate have been kept. Please try again.');return
+                    st.session_state.budget_saved=True;st.rerun()
