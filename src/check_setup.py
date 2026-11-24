@@ -15,6 +15,8 @@ def check():
         meta=json.loads((folder/'candidate_metadata.json').read_text());digest=hashlib.sha256((folder/'experimental_extra_trees.joblib').read_bytes()).hexdigest()
         checks.append(dict(item='Forecast model integrity',ok=digest==meta['artifact_sha256'],detail='Saved artifact hash checked'))
         actual=importlib.metadata.version('scikit-learn');checks.append(dict(item='Model scikit-learn version',ok=actual==meta['sklearn_version'],detail=f"Installed {actual}; model expects {meta['sklearn_version']}"))
+        from household_model_check import load_fixed_candidate
+        active,_=load_fixed_candidate();checks.append(dict(item='Forecast method configuration',ok=True,detail=active['method']))
     except Exception as e:checks.append(dict(item='Forecast model',ok=False,detail=str(e)))
     model_dir=ROOT/'models/ocr'
     if not model_dir.exists():

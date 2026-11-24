@@ -17,7 +17,10 @@ def predict_candidate(bundle,records):
  frame,target=feature_row(records);x,scale=relative_features(frame)
  value=float(np.expm1(bundle['estimator'].predict(x))[0]*scale[0])
  if not np.isfinite(value) or value<0:raise ValueError('Experimental model returned invalid consumption.')
- return dict(target_month=target,consumption_kwh=value,method=bundle['method'],status='Experimental, not validated on this household')
+ raw=value;weight=bundle.get('previous_month_weight',0)
+ if type(weight) not in (int,float) or not np.isfinite(weight) or not 0<=weight<=1:raise ValueError('Invalid previous-month blend weight.')
+ if weight:value=(1-weight)*raw+weight*float(sorted(records,key=lambda r:r['month'])[-1]['kwh'])
+ return dict(target_month=target,consumption_kwh=value,raw_model_kwh=raw,method=bundle['method'],status='Experimental development model; future accuracy not established')
 
 def save_candidate():
  from pakistan_model_comparison import build

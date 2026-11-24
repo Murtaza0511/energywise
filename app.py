@@ -83,7 +83,7 @@ if view=='My bills':
             selected=current.get('forecast_method','three_month_average' if settings else 'extra_trees')
             if selected=='mean3':selected='three_month_average'
             method=st.selectbox('Forecasting method',methods,index=methods.index(selected) if selected in methods else None,
-                format_func=lambda value:'Extra Trees (Pakistani household model)' if value=='extra_trees' else 'Three-month average')
+                format_func=lambda value:'Extra Trees + recent-bill blend (Pakistani model)' if value=='extra_trees' else 'Three-month average')
             st.caption('Price edits keep your accepted savings plan. Changing the forecasting method returns to its history-based estimate and keeps your saved appliance routine.')
             if st.form_submit_button('Save prices and assumptions'):
                 try:

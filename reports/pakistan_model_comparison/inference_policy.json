@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "method": "Extra Trees + recent-bill blend",
+  "artifact_sha256": "f7700de643bdda96fd3bf452162bd2f2eb4dcba34268be7401cb50ed0b9aa6ff",
+  "previous_month_weight": 0.25,
+  "evidence": {
+    "status": "Exploratory development on previously seen data, not prospective validation",
+    "household_months": 12,
+    "original_mae_units": 185.66883636270188,
+    "blend_mae_units": 164.70996060535975,
+    "blend_rmse_units": 186.326065,
+    "blend_wape_percent": 17.395877,
+    "selection": "Public early-household ranking, later-public and household safety gates",
+    "sources": [
+      "forecast_improvement_v1",
+      "forecast_improvement_v2"
+    ]
+  }
+}

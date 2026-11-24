@@ -17,6 +17,7 @@ def household_estimate(records,settings):
     plan=(settings or {}).get('saved_usage_plan')
     if settings and 'saved_usage_plan' in settings:validate_saved_plan(plan)
     if plan and plan['history_signature']==history_signature(records):
+        result['plan_model_outdated']=plan.get('inference_sha256')!=result.get('inference_sha256')
         result['consumption_kwh']=plan['units']
         result['saved_plan']=True
     return result
@@ -115,7 +116,7 @@ def render_budget(data,records,settings):
             choices=automatic_choices(appliances,protected,limits)
             result=savings_options(units,settings,appliances,target,days,protected,limits)
             with suggestions:
-                render_savings_options(data,records,settings,units,target,result,choices)
+                render_savings_options(data,records,settings,units,target,result,choices,estimate.get('inference_sha256'))
         except ValueError as error:st.warning(str(error))
     if st.session_state.pop('budget_saved',False):st.success('Your chosen routine is saved and is now reflected in the next-bill estimate. Your bill history was kept.')
     st.caption('Approximate scenarios, not guaranteed bills. Only the suggested appliance reductions change, within the displayed limits. Other household use and saved tax/adjustment amounts stay unchanged. The same estimated peak-use share is applied to reductions; exact appliance timing is not known.')
@@ -128,7 +129,7 @@ def render_budget(data,records,settings):
             clear_plan(data,settings);st.rerun()
 
 
-def render_savings_options(data,records,settings,units,target,result,choices):
+def render_savings_options(data,records,settings,units,target,result,choices,inference_sha256=None):
     st.subheader('Suggested plans — what to use less')
     if result['already_met']:st.success('Your current estimate is already within your target. No reduction is needed.')
     elif not any(r['can_reduce'] and r['hours']>r['minimum_hours'] for r in choices):
@@ -146,7 +147,7 @@ def render_savings_options(data,records,settings,units,target,result,choices):
                 if gap>0:st.caption(f"About Rs {gap:,.0f} above your target. Suggested times are rounded to whole minutes.")
                 if st.button('Accept and save this plan',key=f'save_budget_{index}'):
                     try:
-                        updated=dict(settings,saved_usage_plan=dict(history_signature=history_signature(records),units=max(0,units-plan['units_saved'])))
+                        updated=dict(settings,saved_usage_plan=dict(history_signature=history_signature(records),units=max(0,units-plan['units_saved']),inference_sha256=inference_sha256))
                         with plan_transaction(data):
                             save_appliances(data,plan['appliances'])
                             save_settings(data,updated)

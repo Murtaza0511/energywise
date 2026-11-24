@@ -22,7 +22,7 @@ def render_estimate(records,settings,data=None):
     if not status['ready'] and not repair:
         st.info('Add at least six consecutive monthly records to unlock the next-bill estimate and target-bill plan. You can continue uploading and reviewing bills now.')
     if (settings or {}).get('forecast_method')=='extra_trees':
-        st.caption('Your electricity use is predicted with the tested Extra Trees model.' if status['ready'] else 'Add the missing readings to start your prediction.')
+        st.caption('Your electricity use is predicted with the selected Pakistani forecasting method.' if status['ready'] else 'Add the missing readings to start your prediction.')
     if combined_prices_pending(settings):
         st.info('The money calculator also needs an update for your two meters. This is work for us to finish; you do not need to change any prices now.')
     estimate=None;amount=None
@@ -38,6 +38,7 @@ def render_estimate(records,settings,data=None):
         elif not combined_prices_pending(settings):left.info('Add bill prices in My bills to see the estimated cost.')
         right.metric('Estimated electricity use',f'{units:,.1f} units')
         st.caption(f'Estimate for {estimate["target_month"]}. '+('Includes your accepted appliance plan.' if estimate.get('saved_plan') else estimate['method']+'.'))
+        if estimate.get('plan_model_outdated'):st.info('Your saved plan was made with an earlier forecasting configuration. Its chosen units have been kept. Use Plan my bill → Return to the history-based estimate to review the updated forecast.')
         latest=max(records,key=lambda r:r['month'])
         difference=units-float(latest['kwh'])
         st.write(f'Compared with {latest["month"]}: about {abs(difference):.1f} units '+('more.' if difference>=0 else 'less.'))

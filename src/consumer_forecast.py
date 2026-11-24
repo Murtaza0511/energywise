@@ -18,8 +18,10 @@ def forecast(records,settings=None):
     from pakistan_candidate import predict_candidate
     bundle,meta=load_fixed_candidate()
     result=predict_candidate(bundle,records)
+    blended=bool(bundle.get('previous_month_weight',0))
+    notice=('Experimental Pakistani Extra Trees/recent-bill blend. On 12 previously used household months, average error was about 165 units versus 186 for the original model and 205 for the previous-month method. These are development results, not an independent future accuracy test.' if blended else 'Experimental Pakistani Extra Trees model. On 12 household historical months, average error was about 186 units versus 205 for the previous-month method. This retrospective check does not guarantee future accuracy.')
     result.update(source_months=[r['month'] for r in sorted(records,key=lambda r:r['month'])[-6:]],
-        notice='Experimental Pakistani Extra Trees model. On 12 combined-household historical months, average error was about 186 units versus 205 for the previous-month method. This small retrospective check does not guarantee future accuracy.',model_sha256=meta['artifact_sha256'])
+        notice=notice,model_sha256=meta['artifact_sha256'],inference_sha256=meta['inference_sha256'])
     result['averaged_input_months']=[r['month'] for r in sorted(records,key=lambda r:r['month'])[-6:] if 'interpolated' in r.get('source','').lower()]
     if result['averaged_input_months']:result['notice']+=' Includes a user-approved averaged reading for '+', '.join(result['averaged_input_months'])+'.'
     return result
