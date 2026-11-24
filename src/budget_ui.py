@@ -3,7 +3,7 @@ import calendar,uuid,hashlib,json
 import streamlit as st
 import pandas as pd
 from budget_planner import PRESETS,suggest_plans,bill_for_units,automatic_choices,savings_options
-from storage import load_appliances,save_appliances,save_settings
+from storage import load_appliances,save_appliances,save_settings,StorageError,recovery_screen
 from consumer_forecast import forecast,combined_prices_pending
 
 
@@ -42,12 +42,15 @@ def render_budget(data,records,settings):
         st.info('Add six consecutive months in My bills first. The planner needs a starting estimate.');return
     units=estimate['consumption_kwh']
     year,month=map(int,estimate['target_month'].split('-'));days=calendar.monthrange(year,month)[1]
-    starting=bill_for_units(units,settings)
+    try:starting=bill_for_units(units,settings)
+    except ValueError as error:
+        st.error(str(error));return
     st.metric(f"Your estimated next bill · {estimate['target_month']}",f"Rs {starting['total_pkr']:,.2f}")
     st.caption('Based on your saved usage plan.' if estimate.get('saved_plan') else 'Starting estimate: '+estimate['method']+'.')
     target=st.number_input('I want my bill to be around (Rs)',min_value=0.,value=25000.,step=500.,key='bill_target')
     st.write('Tell us once what you use at home. Enter your target and we will suggest what to use less.')
-    appliances=load_appliances(data)
+    try:appliances=load_appliances(data)
+    except StorageError as error:recovery_screen(error)
     with st.expander('Add an appliance',expanded=not appliances):
         kind=st.selectbox('What appliance is it?',list(PRESETS),key='appliance_kind')
         with st.form('new_appliance'):

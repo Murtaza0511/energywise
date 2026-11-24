@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 import bill_photo
-from storage import save_records,save_settings
+from storage import save_records,save_settings,delete_record
 from billing import settings_from_bill,reconcile_example
 from personal_estimate import history_status,month_id,month_label
 
@@ -110,11 +110,11 @@ def render_bills(root,data,records):
                         new_units=st.number_input('Units',min_value=0.,value=float(row['kwh']))
                         if st.form_submit_button('Save changes'):
                             try:
-                                save_records(data,[r for r in records if r['month']!=row['month']]+[dict(month=new_month,kwh=new_units,source='User-reviewed bill record')]);st.rerun()
+                                save_records(data,[r for r in records if r['month']!=row['month']]+[dict(month=new_month,kwh=new_units,source='User-reviewed bill record')],deleted_months=[row['month']] if new_month!=row['month'] else []);st.rerun()
                             except ValueError as error:st.error(str(error))
                     if st.checkbox('Remove this month',key=f'remove_check_{row["month"]}'):
                         if st.button('Remove bill record',key=f'remove_bill_{row["month"]}'):
-                            save_records(data,[r for r in records if r['month']!=row['month']]);st.rerun()
+                            delete_record(data,records,row['month']);st.rerun()
     if records:
         if st.button('See my next bill estimate',type='primary',on_click=lambda:st.session_state.update(page='Next bill estimate')):pass
         st.download_button('Download my monthly records (CSV)',pd.DataFrame(records).to_csv(index=False),file_name='my_monthly_electricity.csv',mime='text/csv')

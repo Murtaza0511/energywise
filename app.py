@@ -6,9 +6,9 @@ import streamlit as st
 
 ROOT=Path(__file__).resolve().parent
 sys.path.insert(0,str(ROOT/'src'))
-from billing import calculate_bill,settings_from_bill,reconcile_example,number
+from billing import calculate_bill,settings_from_bill,reconcile_example,number,editable_settings
 from personal_estimate import estimate_next_month
-from storage import load_records,save_records,load_settings,save_settings
+from storage import load_records,save_records,load_settings,save_settings,StorageError,recovery_screen
 from bill_photo import recognize_photo,merge_photo_record
 from budget_ui import render_budget,household_estimate
 from estimate_ui import render_estimate
@@ -23,8 +23,10 @@ DATA=gate_access(ROOT,DATA)
 view=st.sidebar.radio('Go to',['My bills','Next bill estimate','Plan my bill'],key='page')
 st.sidebar.markdown('<div class="sidebar-note"><strong>Your home. Your control.</strong>Keep your history together, see what’s ahead and explore ways to save.<br><br>Photos are read on this computer.</div>',unsafe_allow_html=True)
 page_header(view)
-records=load_records(DATA)
-settings=load_settings(DATA)
+try:
+    records=load_records(DATA)
+    settings=load_settings(DATA)
+except StorageError as error:recovery_screen(error)
 
 
 def breakdown(result):
@@ -42,11 +44,12 @@ if view=='My bills':
     with st.expander('Advanced details — bill prices and charges'):
         st.subheader('Prices and charges from your bill')
         st.write('Enter the rates printed on your bill. Other named amounts stay unchanged in scenarios until you edit them.')
-        current=settings or {}
+        current,price_problems=editable_settings(settings)
+        if settings and price_problems:st.warning('Please complete or correct: '+', '.join(price_problems)+'. Your valid saved values and bill history are kept.')
         with st.form('prices'):
             left,right=st.columns(2)
-            off=left.number_input('Off-peak price per unit (Rs)',min_value=0.0,value=float(current['off_peak_rate']) if settings else None,format='%.4f')
-            peak=right.number_input('Peak price per unit (Rs)',min_value=0.0,value=float(current['peak_rate']) if settings else None,format='%.4f')
+            off=left.number_input('Off-peak price per unit (Rs)',min_value=0.0,value=current.get('off_peak_rate'),format='%.4f')
+            peak=right.number_input('Peak price per unit (Rs)',min_value=0.0,value=current.get('peak_rate'),format='%.4f')
             fixed=left.number_input('Fixed charge shown on your bill (Rs)',min_value=0.0,value=float(current.get('fixed_charge',0)))
             phl=right.number_input('PHL surcharge per unit, if listed (Rs)',min_value=0.0,value=float(current.get('phl_rate',0)),format='%.4f')
             charges=st.data_editor(pd.DataFrame(current.get('carried_charges',[]),columns=['name','amount_pkr']),num_rows='dynamic',hide_index=True,

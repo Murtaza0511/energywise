@@ -37,6 +37,9 @@ def monthly_use(row,month_days):
 
 
 def bill_for_units(units,settings):
+    units=float(number(units,'Electricity units'))
+    from billing import validate_settings
+    validate_settings(settings)
     share=float(number(settings['peak_share'],'Peak share'))
     if share>1:raise ValueError('Peak share must be between zero and one.')
     return calculate_bill(units*(1-share),units*share,**{k:settings[k] for k in ['off_peak_rate','peak_rate','fixed_charge','phl_rate','carried_charges']})
